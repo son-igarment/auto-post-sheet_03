@@ -20,7 +20,9 @@ class SocialDispatcher {
         ];
 
         try {
-            $result = RetryHelper::run(function () use ($webhook, $payload) {
+            $attemptUsed = 0;
+            $result = RetryHelper::run(function ($attempt) use (&$attemptUsed, $webhook, $payload) {
+                $attemptUsed = $attempt;
                 $response = wp_remote_post($webhook, [
                     'timeout' => 15,
                     'headers' => ['Content-Type' => 'application/json'],
@@ -38,7 +40,8 @@ class SocialDispatcher {
 
             if ($result === true) {
                 self::bump_stat('webhook_ok');
-                AutoPostLogger::log('Social webhook dispatched successfully', 'social', 'info');
+                $suffix = $attemptUsed>0 ? (' (retry x' . $attemptUsed . ')') : '';
+                AutoPostLogger::log('Social webhook dispatched successfully' . $suffix, 'social', 'info');
                 return ['ok' => true];
             }
         } catch (\Throwable $e) {
@@ -50,7 +53,14 @@ class SocialDispatcher {
     }
 
     private static function bump_stat($key) {
-        $stats = get_option('auto_post_sheet_stats', ['posted'=>0,'failed'=>0,'webhook_ok'=>0,'webhook_fail'=>0]);
+        $stats = get_option('auto_post_sheet_stats', [
+            'posted'=>0,
+            'failed'=>0,
+            'webhook_ok'=>0,
+            'webhook_fail'=>0,
+            'retry_ok'=>0,
+            'retry_fail'=>0
+        ]);
         $stats[$key] = intval($stats[$key] ?? 0) + 1;
         update_option('auto_post_sheet_stats', $stats);
     }

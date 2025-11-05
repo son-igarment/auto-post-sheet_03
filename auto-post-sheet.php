@@ -184,24 +184,62 @@ class AutoPostSheet {
     public function cron_heartbeat() {
         update_option('auto_post_sheet_last_heartbeat', current_time('mysql'));
         require_once plugin_dir_path(__FILE__) . 'includes/Logger.php';
-        $stats = get_option('auto_post_sheet_stats', ['posted'=>0,'failed'=>0,'webhook_ok'=>0,'webhook_fail'=>0]);
-        AutoPostLogger::log('Heartbeat - posted=' . ($stats['posted'] ?? 0) . ', failed=' . ($stats['failed'] ?? 0) . ', wh_ok=' . ($stats['webhook_ok'] ?? 0) . ', wh_fail=' . ($stats['webhook_fail'] ?? 0), 'cron');
+        $stats = get_option('auto_post_sheet_stats', [
+            'posted'=>0,
+            'failed'=>0,
+            'webhook_ok'=>0,
+            'webhook_fail'=>0,
+            'retry_ok'=>0,
+            'retry_fail'=>0
+        ]);
+        AutoPostLogger::log(
+            'Heartbeat - posted=' . ($stats['posted'] ?? 0)
+            . ', failed=' . ($stats['failed'] ?? 0)
+            . ', retry_ok=' . ($stats['retry_ok'] ?? 0)
+            . ', retry_fail=' . ($stats['retry_fail'] ?? 0)
+            . ', wh_ok=' . ($stats['webhook_ok'] ?? 0)
+            . ', wh_fail=' . ($stats['webhook_fail'] ?? 0),
+            'cron'
+        );
     }
 
     public function cron_daily_report() {
         $config = get_option($this->option_name, []);
-        $stats = get_option('auto_post_sheet_stats', ['posted'=>0,'failed'=>0,'webhook_ok'=>0,'webhook_fail'=>0]);
+        $stats = get_option('auto_post_sheet_stats', [
+            'posted'=>0,
+            'failed'=>0,
+            'webhook_ok'=>0,
+            'webhook_fail'=>0,
+            'retry_ok'=>0,
+            'retry_fail'=>0
+        ]);
+        $retry_ok = intval($stats['retry_ok'] ?? 0);
+        $retry_fail = intval($stats['retry_fail'] ?? 0);
+        $retry_total = max(0, $retry_ok + $retry_fail);
+        $retry_rate = $retry_total > 0 ? round(($retry_ok / $retry_total) * 100) : null;
+        $success100 = ($retry_ok > 0 && $retry_fail === 0);
         $message = sprintf(
-            "Auto Report %s\nPosted: %d\nFailed: %d\nWebhook OK: %d\nWebhook Failed: %d",
+            "Auto Report %s\nPosted: %d\nFailed: %d\nRetry OK: %d\nRetry Fail: %d%s%s\nWebhook OK: %d\nWebhook Failed: %d",
             current_time('mysql'),
             intval($stats['posted'] ?? 0),
             intval($stats['failed'] ?? 0),
+            $retry_ok,
+            $retry_fail,
+            is_null($retry_rate) ? '' : ('\nRetry Success Rate: ' . $retry_rate . '%'),
+            $success100 ? "\nRetry thành công 100%" : '',
             intval($stats['webhook_ok'] ?? 0),
             intval($stats['webhook_fail'] ?? 0)
         );
         require_once plugin_dir_path(__FILE__) . 'includes/Notifier.php';
         Notifier::dispatch($message, $config);
-        update_option('auto_post_sheet_stats', ['posted'=>0,'failed'=>0,'webhook_ok'=>0,'webhook_fail'=>0]);
+        update_option('auto_post_sheet_stats', [
+            'posted'=>0,
+            'failed'=>0,
+            'webhook_ok'=>0,
+            'webhook_fail'=>0,
+            'retry_ok'=>0,
+            'retry_fail'=>0
+        ]);
     }
 
     public function register_rest_routes() {
