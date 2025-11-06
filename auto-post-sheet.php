@@ -47,6 +47,30 @@ class AutoPostSheet {
         <div class="wrap">
             <h1>Auto Post from Google Sheet</h1>
 
+            <h2>System Dashboard</h2>
+            <?php
+                $stats = get_option('auto_post_sheet_stats', [
+                    'posted'=>0,
+                    'failed'=>0,
+                    'webhook_ok'=>0,
+                    'webhook_fail'=>0,
+                    'retry_ok'=>0,
+                    'retry_fail'=>0
+                ]);
+                $last_hb = get_option('auto_post_sheet_last_heartbeat', 'N/A');
+                $cache_ttl_current = intval($config['cache_ttl'] ?? 60);
+            ?>
+            <ul>
+                <li><strong>Last Heartbeat:</strong> <?php echo esc_html($last_hb); ?></li>
+                <li><strong>Posted:</strong> <?php echo intval($stats['posted'] ?? 0); ?>,
+                    <strong>Failed:</strong> <?php echo intval($stats['failed'] ?? 0); ?></li>
+                <li><strong>Retry OK:</strong> <?php echo intval($stats['retry_ok'] ?? 0); ?>,
+                    <strong>Retry Fail:</strong> <?php echo intval($stats['retry_fail'] ?? 0); ?></li>
+                <li><strong>Webhook OK:</strong> <?php echo intval($stats['webhook_ok'] ?? 0); ?>,
+                    <strong>Webhook Fail:</strong> <?php echo intval($stats['webhook_fail'] ?? 0); ?></li>
+                <li><strong>Cache TTL:</strong> <?php echo $cache_ttl_current; ?> seconds</li>
+            </ul>
+
             <?php if ($success): ?>
                 <div class="notice notice-success"><p>Posts processed successfully!</p></div>
             <?php endif; ?>
@@ -67,6 +91,10 @@ class AutoPostSheet {
 
                 <label>Sheet Name & Range (VD: Trang tính1!A1:G1000):</label><br>
                 <input type="text" name="sheet_range" value="<?php echo esc_attr($config['sheet_range'] ?? ''); ?>" style="width:400px"><br><br>
+
+                <h2>Performance</h2>
+                <label>Cache TTL (seconds):</label><br>
+                <input type="number" min="0" step="1" name="cache_ttl" value="<?php echo esc_attr(intval($config['cache_ttl'] ?? 60)); ?>" style="width:150px"><br><br>
 
                 <h2>Integrations</h2>
                 <label>Socials Webhook URL (optional):</label><br>
@@ -126,7 +154,8 @@ class AutoPostSheet {
             'enabled_platforms' => $enabled_platforms,
             'report_email' => sanitize_email($_POST['report_email'] ?? ''),
             'telegram_bot_token' => sanitize_text_field($_POST['telegram_bot_token'] ?? ''),
-            'telegram_chat_id' => sanitize_text_field($_POST['telegram_chat_id'] ?? '')
+            'telegram_chat_id' => sanitize_text_field($_POST['telegram_chat_id'] ?? ''),
+            'cache_ttl' => max(0, intval($_POST['cache_ttl'] ?? 60))
         ]);
 
         $service = new GoogleSheetService($sheet_id, $json_path);

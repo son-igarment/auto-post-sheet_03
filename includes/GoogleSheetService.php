@@ -19,6 +19,19 @@ class GoogleSheetService {
     public function get_rows($range) {
         try {
             require_once __DIR__ . '/Retry.php';
+            require_once __DIR__ . '/Cache.php';
+            // Try cache first for fast dashboard responsiveness
+            $config = function_exists('get_option') ? get_option('auto_post_sheet_config', []) : [];
+            $ttl = intval($config['cache_ttl'] ?? 60);
+            $buster = AutoPostCache::get_buster();
+            $cacheKey = 'rows_' . md5($this->sheet_id . '|' . $range . '|' . $buster);
+            if ($ttl > 0) {
+                $cached = AutoPostCache::get($cacheKey);
+                if ($cached !== false && is_array($cached)) {
+                    $this->log("Served from cache: " . count($cached) . " rows");
+                    return $cached;
+                }
+            }
             $attemptUsed = 0;
             $response = RetryHelper::run(function($attempt) use (&$attemptUsed, $range) {
                 $attemptUsed = $attempt;
@@ -26,6 +39,9 @@ class GoogleSheetService {
             }, 3, 500, 1.7, 'google-sheet-get');
             $values = $response->getValues();
             $this->log("Fetched " . count($values ?? []) . " rows" . ($attemptUsed>0 ? " (retry x{$attemptUsed})" : ''));
+            if ($ttl > 0 && is_array($values)) {
+                AutoPostCache::set($cacheKey, $values, $ttl);
+            }
             return $values ?? [];
         } catch (Exception $e) {
             $this->log("Error fetching rows: " . $e->getMessage(), 'error');
@@ -44,6 +60,9 @@ class GoogleSheetService {
                 return $this->service->spreadsheets_values->update($this->sheet_id, $range, $body, $params);
             }, 3, 500, 1.7, 'google-sheet-update');
             $this->log("Updated Sheet Range: {$range}, Updated Cells: " . $response->getUpdatedCells() . ($attemptUsed>0 ? " (retry x{$attemptUsed})" : ''));
+            // Invalidate cache via buster increment
+            require_once __DIR__ . '/Cache.php';
+            AutoPostCache::bump_buster();
             return true;
         } catch (Exception $e) {
             $this->log("Error updating sheet: " . $e->getMessage(), 'error');
@@ -64,6 +83,9 @@ class GoogleSheetService {
                 return $this->service->spreadsheets_values->append($this->sheet_id, $range, $body, $params);
             }, 3, 500, 1.7, 'google-sheet-append');
             $this->log("Appended row to {$range}" . ($attemptUsed>0 ? " (retry x{$attemptUsed})" : ''));
+            // Invalidate cache via buster increment
+            require_once __DIR__ . '/Cache.php';
+            AutoPostCache::bump_buster();
             return true;
         } catch (Exception $e) {
             $this->log("Error appending row: " . $e->getMessage(), 'error');
