@@ -1,0 +1,5 @@
+{
+  "system": "RetrySystem_1",
+  "status": "initialized",
+  "note": "This file will be updated by app.py with retry/caching status."
+}

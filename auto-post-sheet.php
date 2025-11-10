@@ -96,6 +96,16 @@ class AutoPostSheet {
                 <label>Cache TTL (seconds):</label><br>
                 <input type="number" min="0" step="1" name="cache_ttl" value="<?php echo esc_attr(intval($config['cache_ttl'] ?? 60)); ?>" style="width:150px"><br><br>
 
+                <h2>Retry Settings</h2>
+                <label>Max Attempts:</label><br>
+                <input type="number" min="0" step="1" name="retry_max_attempts" value="<?php echo esc_attr(intval($config['retry_max_attempts'] ?? 3)); ?>" style="width:150px"><br><br>
+                <label>Initial Delay (ms):</label><br>
+                <input type="number" min="0" step="50" name="retry_initial_delay_ms" value="<?php echo esc_attr(intval($config['retry_initial_delay_ms'] ?? 500)); ?>" style="width:150px"><br><br>
+                <label>Backoff Factor:</label><br>
+                <input type="number" min="1" step="0.1" name="retry_backoff_factor" value="<?php echo esc_attr(floatval($config['retry_backoff_factor'] ?? 1.7)); ?>" style="width:150px"><br><br>
+                <label>Jitter (ms):</label><br>
+                <input type="number" min="0" step="50" name="retry_jitter_ms" value="<?php echo esc_attr(intval($config['retry_jitter_ms'] ?? 0)); ?>" style="width:150px"><br><br>
+
                 <h2>Integrations</h2>
                 <label>Socials Webhook URL (optional):</label><br>
                 <input type="url" name="social_webhook_url" value="<?php echo esc_attr($config['social_webhook_url'] ?? ''); ?>" style="width:500px" placeholder="https://your-bot-central.example.com/webhooks/socials"><br><br>
@@ -155,7 +165,11 @@ class AutoPostSheet {
             'report_email' => sanitize_email($_POST['report_email'] ?? ''),
             'telegram_bot_token' => sanitize_text_field($_POST['telegram_bot_token'] ?? ''),
             'telegram_chat_id' => sanitize_text_field($_POST['telegram_chat_id'] ?? ''),
-            'cache_ttl' => max(0, intval($_POST['cache_ttl'] ?? 60))
+            'cache_ttl' => max(0, intval($_POST['cache_ttl'] ?? 60)),
+            'retry_max_attempts' => max(0, intval($_POST['retry_max_attempts'] ?? 3)),
+            'retry_initial_delay_ms' => max(0, intval($_POST['retry_initial_delay_ms'] ?? 500)),
+            'retry_backoff_factor' => max(1, floatval($_POST['retry_backoff_factor'] ?? 1.7)),
+            'retry_jitter_ms' => max(0, intval($_POST['retry_jitter_ms'] ?? 0))
         ]);
 
         $service = new GoogleSheetService($sheet_id, $json_path);

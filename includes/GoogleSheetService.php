@@ -36,7 +36,7 @@ class GoogleSheetService {
             $response = RetryHelper::run(function($attempt) use (&$attemptUsed, $range) {
                 $attemptUsed = $attempt;
                 return $this->service->spreadsheets_values->get($this->sheet_id, $range);
-            }, 3, 500, 1.7, 'google-sheet-get');
+            }, null, null, null, 'google-sheet-get', null);
             $values = $response->getValues();
             $this->log("Fetched " . count($values ?? []) . " rows" . ($attemptUsed>0 ? " (retry x{$attemptUsed})" : ''));
             if ($ttl > 0 && is_array($values)) {
@@ -58,7 +58,7 @@ class GoogleSheetService {
             $response = RetryHelper::run(function($attempt) use (&$attemptUsed, $range, $body, $params) {
                 $attemptUsed = $attempt;
                 return $this->service->spreadsheets_values->update($this->sheet_id, $range, $body, $params);
-            }, 3, 500, 1.7, 'google-sheet-update');
+            }, null, null, null, 'google-sheet-update', null);
             $this->log("Updated Sheet Range: {$range}, Updated Cells: " . $response->getUpdatedCells() . ($attemptUsed>0 ? " (retry x{$attemptUsed})" : ''));
             // Invalidate cache via buster increment
             require_once __DIR__ . '/Cache.php';
@@ -81,7 +81,7 @@ class GoogleSheetService {
             RetryHelper::run(function($attempt) use (&$attemptUsed, $range, $body, $params) {
                 $attemptUsed = $attempt;
                 return $this->service->spreadsheets_values->append($this->sheet_id, $range, $body, $params);
-            }, 3, 500, 1.7, 'google-sheet-append');
+            }, null, null, null, 'google-sheet-append', null);
             $this->log("Appended row to {$range}" . ($attemptUsed>0 ? " (retry x{$attemptUsed})" : ''));
             // Invalidate cache via buster increment
             require_once __DIR__ . '/Cache.php';

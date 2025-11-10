@@ -56,7 +56,7 @@ class AutoPostHandler {
                         throw new \Exception('wp_insert_post failed');
                     }
                     return $result;
-                }, 3, 700, 1.6, 'wp-insert-post');
+                }, null, null, null, 'wp-insert-post', null);
             } catch (\Throwable $e) {
                 $post_id = 0;
                 $this->log('Insert post error: ' . $e->getMessage());

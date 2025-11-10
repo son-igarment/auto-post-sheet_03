@@ -4,6 +4,7 @@ class Notifier {
     public static function dispatch($message, $config) {
         require_once __DIR__ . '/Logger.php';
         require_once __DIR__ . '/Retry.php';
+        require_once __DIR__ . '/Cache.php';
         $sent = false;
 
         // Email
@@ -21,6 +22,13 @@ class Notifier {
                 'text' => $message,
                 'parse_mode' => 'HTML'
             ];
+            // Dedupe the same message for a short TTL to avoid spam
+            $dedupeKey = 'tg_' . md5($bot . '|' . $chat . '|' . $message);
+            $dedupeTtl = 30; // seconds
+            if (AutoPostCache::get($dedupeKey)) {
+                AutoPostLogger::log('Telegram message deduped (skipped duplicate within TTL)', 'notifier', 'info');
+                $sent = true; // treat as sent to not trigger error reports
+            } else {
             try {
                 $attemptUsed = 0;
                 $ok = RetryHelper::run(function($attempt) use (&$attemptUsed, $url, $body) {
@@ -37,13 +45,17 @@ class Notifier {
                         throw new \Exception('HTTP ' . $code);
                     }
                     return true;
-                }, 3, 500, 1.7, 'telegram');
+                }, null, null, null, 'telegram', null);
                 if ($ok) $sent = true;
                 if ($attemptUsed > 0) {
                     AutoPostLogger::log('Telegram sent with retry x' . $attemptUsed, 'notifier', 'info');
                 }
+                if ($sent) {
+                    AutoPostCache::set($dedupeKey, 1, $dedupeTtl);
+                }
             } catch (\Throwable $e) {
                 AutoPostLogger::log('Telegram notify error: ' . $e->getMessage(), 'notifier', 'error');
+            }
             }
         }
 

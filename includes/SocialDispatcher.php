@@ -36,7 +36,7 @@ class SocialDispatcher {
                     throw new \Exception('HTTP ' . $code);
                 }
                 return true;
-            }, 3, 800, 1.8, 'social-webhook');
+            }, null, null, null, 'social-webhook', null);
 
             if ($result === true) {
                 self::bump_stat('webhook_ok');
