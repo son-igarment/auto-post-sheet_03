@@ -4,6 +4,7 @@ class SocialDispatcher {
     public static function dispatch($title, $content, $url, $config) {
         require_once __DIR__ . '/Retry.php';
         require_once __DIR__ . '/Logger.php';
+        require_once __DIR__ . '/DashboardService.php';
 
         $webhook = $config['social_webhook_url'] ?? '';
         $platforms = $config['enabled_platforms'] ?? [];
@@ -36,7 +37,7 @@ class SocialDispatcher {
                     throw new \Exception('HTTP ' . $code);
                 }
                 return true;
-            }, null, null, null, 'social-webhook', null);
+            }, null, null, null, 'auto-bot-social', null, ['context_slug' => 'auto_bot']);
 
             if ($result === true) {
                 self::bump_stat('webhook_ok');
@@ -63,6 +64,6 @@ class SocialDispatcher {
         ]);
         $stats[$key] = intval($stats[$key] ?? 0) + 1;
         update_option('auto_post_sheet_stats', $stats);
+        AutoPostDashboardService::flush();
     }
 }
-

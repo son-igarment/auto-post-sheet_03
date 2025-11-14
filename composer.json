@@ -1,0 +1,10 @@
+{
+  "name": "local/auto-post-sheet",
+  "description": "Auto Post From Google Sheet WordPress plugin dependencies",
+  "type": "library",
+  "require": {
+    "php": ">=7.4",
+    "google/apiclient": "^2.15"
+  }
+}
+

@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: wordpress
+      MYSQL_USER: wp
+      MYSQL_PASSWORD: wp
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - db_data:/var/lib/mysql
+
+  wp:
+    image: wordpress:php8.2-apache
+    depends_on:
+      - db
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_USER: wp
+      WORDPRESS_DB_PASSWORD: wp
+      WORDPRESS_DB_NAME: wordpress
+      WP_DEBUG: "1"
+      WP_DEBUG_LOG: "1"
+    volumes:
+      - wp_data:/var/www/html
+      # Mount this repo as the plugin directory
+      - ./:/var/www/html/wp-content/plugins/auto-post-sheet
+
+  # Helper to install Composer deps into the plugin folder (vendor/)
+  composer:
+    image: composer:2
+    working_dir: /app
+    entrypoint: ["composer"]
+    command: ["install", "--no-interaction", "--prefer-dist", "--optimize-autoloader"]
+    volumes:
+      - ./:/app
+
+  # Optional DB admin UI
+  phpmyadmin:
+    image: phpmyadmin:5
+    depends_on:
+      - db
+    restart: unless-stopped
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: root
+    ports:
+      - "8081:80"
+
+volumes:
+  db_data:
+  wp_data:
+

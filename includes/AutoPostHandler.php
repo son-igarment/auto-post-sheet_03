@@ -8,6 +8,7 @@ class AutoPostHandler {
         require_once __DIR__ . '/Retry.php';
         require_once __DIR__ . '/SocialDispatcher.php';
         require_once __DIR__ . '/Notifier.php';
+        require_once __DIR__ . '/DashboardService.php';
     }
 
     public function process($rows) {
@@ -56,7 +57,7 @@ class AutoPostHandler {
                         throw new \Exception('wp_insert_post failed');
                     }
                     return $result;
-                }, null, null, null, 'wp-insert-post', null);
+                }, null, null, null, 'auto-bot-post', null, ['context_slug' => 'auto_bot']);
             } catch (\Throwable $e) {
                 $post_id = 0;
                 $this->log('Insert post error: ' . $e->getMessage());
@@ -91,6 +92,7 @@ class AutoPostHandler {
             }
         }
         $this->log("=== AutoPostHandler finished ===");
+        AutoPostDashboardService::flush();
     }
 
     private function log($msg) {
@@ -112,5 +114,6 @@ class AutoPostHandler {
         ]);
         $stats[$key] = intval($stats[$key] ?? 0) + 1;
         update_option('auto_post_sheet_stats', $stats);
+        AutoPostDashboardService::flush();
     }
 }
